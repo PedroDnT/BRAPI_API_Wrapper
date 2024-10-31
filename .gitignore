@@ -1,0 +1,13 @@
+.env
+*.ipynb
+*.csv
+*.json
+*.xlsx
+*.xls
+*.pdf
+*.docx
+*.doc
+.DS_Store
+__pycache__
+cache/
+venv/
