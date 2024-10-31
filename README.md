@@ -11,7 +11,7 @@
 ---
 
 <p align="center">
-A Python module that wraps the BRAPI API and BCB data services to provide easy access to Brazilian financial market data.
+A Python module that wraps the BRAPI API and BCB data to provide easy access to Brazilian financial market data.
 <br> 
 </p>
 
