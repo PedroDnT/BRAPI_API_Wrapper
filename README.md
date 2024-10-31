@@ -1,9 +1,5 @@
-<p align="center">
-  <a href="" rel="noopener">
- <img width=200px height=200px src="https://i.imgur.com/6wj0hh6.jpg" alt="Project logo"></a>
-</p>
 
-<h3 align="center">BRAPI API Wrapper</h3>
+<h3 align="center">BR_API Wrapper</h3>
 
 <div align="center">
 
@@ -19,7 +15,7 @@ A Python module that wraps the BRAPI API and BCB data services to provide easy a
 <br> 
 </p>
 
-## 🧐 About <a name = "about"></a>
+## About <a name = "about"></a>
 
 This module provides functions to access Brazilian financial market data through the BRAPI API and Brazilian Central Bank (BCB) services. It handles API authentication, request formatting, and returns clean pandas DataFrames ready for analysis.
 
@@ -121,7 +117,7 @@ countries = get_available_countries()
 - python-dotenv
 - python-bcb
 
-## 🎉 Data Sources <a name = "acknowledgment"></a>
+## Data Sources <a name = "acknowledgment"></a>
 
 - [BRAPI](https://brapi.dev) - Brazilian stocks and market data
 - [BCB](https://www.bcb.gov.br/) - Brazilian Central Bank macroeconomic data
