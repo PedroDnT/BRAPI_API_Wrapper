@@ -17,6 +17,15 @@ logger = logging.getLogger(__name__)
 logger.info(f"API_KEY loaded: {'yes' if API_KEY else 'no'}")
 logger.info(f"API_KEY length: {len(str(API_KEY)) if API_KEY else 0}")
 
+def _convert_to_float64(df):
+    """Convert numeric columns to float64 (double precision)"""
+    for col in df.columns:
+        try:
+            df[col] = pd.to_numeric(df[col], errors='coerce').astype('float64')
+        except:
+            continue
+    return df
+
 def make_request(endpoint, params=None):
     """Make a request to the Brapi API
     
@@ -798,7 +807,7 @@ def fetch_prime_rate(start=None, end=None):
         end (str, optional): End date in 'YYYY-MM-DD' format. Defaults to yesterday.
     
     Returns:
-        pd.DataFrame: DataFrame with date index and prime rate values
+        pd.DataFrame: DataFrame with UTC datetime index and prime rate values
     """
     try:
         # Set default dates if not provided
@@ -831,15 +840,16 @@ def fetch_prime_rate(start=None, end=None):
                 # Create DataFrame
                 df = pd.DataFrame(data)
                 
-                # Convert date to datetime
-                df['date'] = pd.to_datetime(df['date'], format='%d/%m/%Y')
+                # Convert date to UTC datetime
+                df['date'] = pd.to_datetime(df['date'], format='%d/%m/%Y').dt.tz_localize('UTC')
                 
                 # Convert value to numeric, removing any % signs if present
                 df['value'] = df['value'].replace({'%': ''}, regex=True)
                 df['value'] = pd.to_numeric(df['value'], errors='coerce')
                 
-                # Set date as index
+                # Set date as index with proper name
                 df.set_index('date', inplace=True)
+                df.index.name = 'date'
                 
                 # Sort index
                 df.sort_index(inplace=True)
@@ -856,7 +866,7 @@ def fetch_prime_rate(start=None, end=None):
         return None
         
     except Exception as e:
-        logger.error(f"Error fetching prime rate data: {str(e)}")
+        print(f"Error fetching prime rate data: {str(e)}")
         return None
 
 def get_available_currencies(search=None):
@@ -900,4 +910,305 @@ def get_available_countries(search=None):
     if search:
         params['search'] = search
     return make_request('api/v2/inflation/available', params)
+
+def fetch_quote_open(tickers, range='1d', interval='1d'):
+    """Fetch open prices for multiple tickers
+    
+    Args:
+        tickers (str or list): Single ticker or list of ticker symbols
+        range (str): Time range ('1d','5d','1mo','3mo','6mo','1y','2y','5y','10y','ytd','max')
+        interval (str): Time interval ('1m','2m','5m','15m','30m','60m','90m','1h','1d','5d','1wk','1mo','3mo')
+        
+    Returns:
+        pd.DataFrame: DataFrame with dates as index and tickers as columns containing open prices
+    """
+    try:
+        if isinstance(tickers, str):
+            tickers = [tickers]
+            
+        all_data = {}
+        for ticker in tickers:
+            ticker_sa = ticker.replace('.SA', '') + '.SA'
+            
+            params = {
+                'range': range,
+                'interval': interval
+            }
+            
+            response = make_request(f'api/quote/{ticker_sa}', params)
+            if not response:
+                continue
+                
+            # Extract historical price data
+            historical_data = None
+            if isinstance(response, dict):
+                historical_data = response.get('results', [{}])[0].get('historicalDataPrice', [])
+            elif isinstance(response, list) and response:
+                historical_data = response[0].get('historicalDataPrice', [])
+                
+            if historical_data:
+                df = pd.DataFrame(historical_data)
+                
+                # Convert date based on interval
+                intraday_intervals = ['1m', '2m', '5m', '15m', '30m', '60m', '90m', '1h']
+                df['date'] = pd.to_datetime(df['date'], unit='s', utc=True)
+                
+                # Select only open price and set date as index
+                df.set_index('date', inplace=True)
+                all_data[ticker] = df['open']
+                
+        if all_data:
+            df = pd.DataFrame(all_data)
+            return _convert_to_float64(df)
+        return pd.DataFrame()
+        
+    except Exception as e:
+        print(f"Error fetching open prices: {str(e)}")
+        return pd.DataFrame()
+
+def fetch_quote_high(tickers, range='1d', interval='1d'):
+    """Fetch high prices for multiple tickers"""
+    try:
+        if isinstance(tickers, str):
+            tickers = [tickers]
+            
+        all_data = {}
+        for ticker in tickers:
+            ticker_sa = ticker.replace('.SA', '') + '.SA'
+            
+            params = {
+                'range': range,
+                'interval': interval
+            }
+            
+            response = make_request(f'api/quote/{ticker_sa}', params)
+            if not response:
+                continue
+                
+            historical_data = None
+            if isinstance(response, dict):
+                historical_data = response.get('results', [{}])[0].get('historicalDataPrice', [])
+            elif isinstance(response, list) and response:
+                historical_data = response[0].get('historicalDataPrice', [])
+                
+            if historical_data:
+                df = pd.DataFrame(historical_data)
+                df['date'] = pd.to_datetime(df['date'], unit='s', utc=True)
+                df.set_index('date', inplace=True)
+                all_data[ticker] = df['high']
+                
+        if all_data:
+            df = pd.DataFrame(all_data)
+            return _convert_to_float64(df)
+        return pd.DataFrame()
+        
+    except Exception as e:
+        print(f"Error fetching high prices: {str(e)}")
+        return pd.DataFrame()
+
+def fetch_quote_low(tickers, range='1d', interval='1d'):
+    """Fetch low prices for multiple tickers"""
+    try:
+        if isinstance(tickers, str):
+            tickers = [tickers]
+            
+        all_data = {}
+        for ticker in tickers:
+            ticker_sa = ticker.replace('.SA', '') + '.SA'
+            
+            params = {
+                'range': range,
+                'interval': interval
+            }
+            
+            response = make_request(f'api/quote/{ticker_sa}', params)
+            if not response:
+                continue
+                
+            historical_data = None
+            if isinstance(response, dict):
+                historical_data = response.get('results', [{}])[0].get('historicalDataPrice', [])
+            elif isinstance(response, list) and response:
+                historical_data = response[0].get('historicalDataPrice', [])
+                
+            if historical_data:
+                df = pd.DataFrame(historical_data)
+                df['date'] = pd.to_datetime(df['date'], unit='s', utc=True)
+                df.set_index('date', inplace=True)
+                all_data[ticker] = df['low']
+                
+        if all_data:
+            df = pd.DataFrame(all_data)
+            return _convert_to_float64(df)
+        return pd.DataFrame()
+        
+    except Exception as e:
+        print(f"Error fetching low prices: {str(e)}")
+        return pd.DataFrame()
+
+def fetch_quote_close(tickers, range='1d', interval='1d'):
+    """Fetch close prices for multiple tickers"""
+    try:
+        if isinstance(tickers, str):
+            tickers = [tickers]
+            
+        all_data = {}
+        for ticker in tickers:
+            ticker_sa = ticker.replace('.SA', '') + '.SA'
+            
+            params = {
+                'range': range,
+                'interval': interval
+            }
+            
+            response = make_request(f'api/quote/{ticker_sa}', params)
+            if not response:
+                continue
+                
+            historical_data = None
+            if isinstance(response, dict):
+                historical_data = response.get('results', [{}])[0].get('historicalDataPrice', [])
+            elif isinstance(response, list) and response:
+                historical_data = response[0].get('historicalDataPrice', [])
+                
+            if historical_data:
+                df = pd.DataFrame(historical_data)
+                df['date'] = pd.to_datetime(df['date'], unit='s', utc=True)
+                df.set_index('date', inplace=True)
+                all_data[ticker] = df['close']
+                
+        if all_data:
+            df = pd.DataFrame(all_data)
+            return _convert_to_float64(df)
+        return pd.DataFrame()
+        
+    except Exception as e:
+        print(f"Error fetching close prices: {str(e)}")
+        return pd.DataFrame()
+
+def fetch_quote_volume(tickers, range='1d', interval='1d'):
+    """Fetch volume data for multiple tickers"""
+    try:
+        if isinstance(tickers, str):
+            tickers = [tickers]
+            
+        all_data = {}
+        for ticker in tickers:
+            ticker_sa = ticker.replace('.SA', '') + '.SA'
+            
+            params = {
+                'range': range,
+                'interval': interval
+            }
+            
+            response = make_request(f'api/quote/{ticker_sa}', params)
+            if not response:
+                continue
+                
+            historical_data = None
+            if isinstance(response, dict):
+                historical_data = response.get('results', [{}])[0].get('historicalDataPrice', [])
+            elif isinstance(response, list) and response:
+                historical_data = response[0].get('historicalDataPrice', [])
+                
+            if historical_data:
+                df = pd.DataFrame(historical_data)
+                df['date'] = pd.to_datetime(df['date'], unit='s', utc=True)
+                df.set_index('date', inplace=True)
+                all_data[ticker] = df['volume']
+                
+        if all_data:
+            df = pd.DataFrame(all_data)
+            return _convert_to_float64(df)
+        return pd.DataFrame()
+        
+    except Exception as e:
+        print(f"Error fetching volume data: {str(e)}")
+        return pd.DataFrame()
+
+def extract_common_stock_data(bs_data_dict, stock_data_df):
+    """Extract common stock data from balance sheet data and align with stock price dates
+    
+    Args:
+        bs_data_dict (dict): Dictionary of balance sheet DataFrames by ticker
+        stock_data_df (pd.DataFrame): DataFrame with stock price data and datetime index
+        
+    Returns:
+        pd.DataFrame: DataFrame with common stock values aligned by date, tickers as columns
+    """
+    try:
+        # Initialize dictionary to store common stock data
+        common_stock_data = {}
+        
+        # Process each ticker's balance sheet data
+        for ticker, bs_df in bs_data_dict.items():
+            # Remove .SA suffix for matching if present
+            clean_ticker = ticker.replace('.SA', '')
+            
+            # Check for variations of "Common Stock" in index
+            possible_names = ['Commonstock', 'Common Stock', 'CommonStock']
+            stock_row = None
+            for name in possible_names:
+                if name in bs_df.index:
+                    stock_row = name
+                    break
+                    
+            if stock_row is None:
+                print(f"No common stock data found for {ticker}")
+                continue
+                
+            # Extract common stock series and clean data
+            common_stock_series = bs_df.loc[stock_row]
+            
+            # Convert values to float64, removing any formatting
+            if isinstance(common_stock_series, pd.Series):
+                common_stock_series = pd.to_numeric(
+                    common_stock_series.astype(str).str.replace(',', ''), 
+                    errors='coerce'
+                ).astype('float64')
+            
+            # Convert index to datetime and localize to UTC
+            common_stock_series.index = pd.to_datetime(common_stock_series.index)
+            if common_stock_series.index.tz is None:
+                common_stock_series.index = common_stock_series.index.tz_localize('UTC')
+            
+            # Store in dictionary using the same ticker format as stock_data_df
+            ticker_key = f"{clean_ticker}.SA" if '.SA' in stock_data_df.columns[0] else clean_ticker
+            common_stock_data[ticker_key] = common_stock_series
+        
+        if not common_stock_data:
+            print("No common stock data found for any ticker")
+            return pd.DataFrame()
+            
+        # Create DataFrame from all series
+        result_df = pd.DataFrame(common_stock_data)
+        
+        # Ensure all columns match stock_data_df
+        result_df = result_df[stock_data_df.columns]
+        
+        # Sort index
+        result_df.sort_index(inplace=True)
+        
+        # Reindex to match stock_data_df dates and forward fill
+        result_df = result_df.reindex(stock_data_df.index, method='ffill')
+        
+        # Ensure all values are float64
+        result_df = result_df.astype('float64')
+        
+        # Print debug information
+        print(f"\nData Summary:")
+        print(f"Dates range: {result_df.index.min()} to {result_df.index.max()}")
+        print(f"Columns (tickers): {result_df.columns.tolist()}")
+        print(f"Data types: {result_df.dtypes.unique()}")
+        print(f"\nSample data:")
+        print(result_df.head())
+        
+        return result_df
+        
+    except Exception as e:
+        print(f"Error extracting common stock data: {str(e)}")
+        print(f"Error details: {str(e.__class__.__name__)}")
+        import traceback
+        traceback.print_exc()
+        return pd.DataFrame()
 
