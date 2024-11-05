@@ -335,7 +335,7 @@ def fetch_available_tickers(search=None):
 def fetch_balance_sheet_history(tickers):
     """Fetch balance sheet history for multiple tickers"""
     try:
-        if isinstance(tickers, str):
+        if isinstance(tickers, str):    
             tickers = [tickers]
         elif not isinstance(tickers, (list, tuple)):
             raise ValueError(f"Expected string or list of tickers, got {type(tickers)}")

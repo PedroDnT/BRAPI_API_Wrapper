@@ -7,3 +7,8 @@ scikit-learn
 xgboost
 statsmodels
 cvxpy
+fastapi
+uvicorn
+openai
+requests
+python-dotenv
